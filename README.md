@@ -28,7 +28,7 @@ is a working example.
 | Input | Default | Meaning |
 |---|---|---|
 | `adapter` | *(required)* | Command that runs your adapter. The corpus directory is appended as its last argument. |
-| `tripwire-version` | `v0.1.0` | Release tag of `stellar-tripwire` to run. |
+| `tripwire-version` | `v0.1.1` | Release tag of `stellar-tripwire` to run. |
 | `corpus-ref` | `main` | Git ref of `stellar-tripwire-corpus` to test against. |
 | `fail-on-unsupported` | `false` | Also fail the job if any check comes back `unsupported`. |
 
