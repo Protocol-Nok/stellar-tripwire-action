@@ -1,0 +1,104 @@
+name: "stellar-tripwire"
+description: "Run the stellar-tripwire ledger conformance corpus against your SDK or indexer adapter in CI."
+author: "Protocol Nok"
+branding:
+  icon: "git-merge"
+  color: "orange"
+
+inputs:
+  adapter:
+    description: "Shell command that runs your adapter (docs/adapter-protocol.md in stellar-tripwire). The corpus directory is appended as its last argument."
+    required: true
+  tripwire-version:
+    description: "stellar-tripwire release tag providing the tripwire binary."
+    required: false
+    default: "v0.1.0"
+  corpus-ref:
+    description: "Git ref of stellar-tripwire-corpus to check out."
+    required: false
+    default: "main"
+  fail-on-unsupported:
+    description: "Treat any 'unsupported' check as a failure, not just 'fail'."
+    required: false
+    default: "false"
+
+outputs:
+  pass:
+    description: "Number of checks that passed."
+    value: ${{ steps.run.outputs.pass }}
+  fail:
+    description: "Number of checks that failed."
+    value: ${{ steps.run.outputs.fail }}
+  unsupported:
+    description: "Number of checks the adapter did not report."
+    value: ${{ steps.run.outputs.unsupported }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: resolve platform
+      id: platform
+      shell: bash
+      run: |
+        case "${{ runner.os }}-${{ runner.arch }}" in
+          Linux-X64)    target=x86_64-unknown-linux-gnu;  ext=tar.gz ;;
+          macOS-ARM64)  target=aarch64-apple-darwin;       ext=tar.gz ;;
+          macOS-X64)    target=x86_64-apple-darwin;        ext=tar.gz ;;
+          Windows-X64)  target=x86_64-pc-windows-msvc;     ext=zip ;;
+          *) echo "::error::unsupported runner ${{ runner.os }}-${{ runner.arch }}"; exit 1 ;;
+        esac
+        echo "target=$target" >> "$GITHUB_OUTPUT"
+        echo "ext=$ext" >> "$GITHUB_OUTPUT"
+
+    - name: download tripwire ${{ inputs.tripwire-version }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/tripwire-bin"
+        mkdir -p "$dir"
+        asset="tripwire-${{ steps.platform.outputs.target }}.${{ steps.platform.outputs.ext }}"
+        gh release download "${{ inputs.tripwire-version }}" \
+          --repo Protocol-Nok/stellar-tripwire \
+          --pattern "$asset" --pattern "$asset.sha256" \
+          --dir "$dir"
+        cd "$dir"
+        sha256sum -c "$asset.sha256"
+        if [ "${{ steps.platform.outputs.ext }}" = "tar.gz" ]; then
+          tar xzf "$asset"
+        else
+          unzip -o "$asset"
+        fi
+        bin_dir="$dir/tripwire-${{ steps.platform.outputs.target }}"
+        echo "$bin_dir" >> "$GITHUB_PATH"
+
+    - name: fetch corpus (stellar-tripwire-corpus@${{ inputs.corpus-ref }})
+      shell: bash
+      run: |
+        set -euo pipefail
+        git clone --quiet --depth 1 --branch "${{ inputs.corpus-ref }}" \
+          https://github.com/Protocol-Nok/stellar-tripwire-corpus "$RUNNER_TEMP/tripwire-corpus"
+
+    - name: run
+      id: run
+      shell: bash
+      run: |
+        set -euo pipefail
+        out="$RUNNER_TEMP/tripwire-result.json"
+        status=0
+        tripwire run "$RUNNER_TEMP/tripwire-corpus" --adapter ${{ inputs.adapter }} --json > "$out" || status=$?
+
+        pass=$(jq '.pass' "$out"); fail=$(jq '.fail' "$out"); unsupported=$(jq '.unsupported' "$out")
+        echo "pass=$pass" >> "$GITHUB_OUTPUT"
+        echo "fail=$fail" >> "$GITHUB_OUTPUT"
+        echo "unsupported=$unsupported" >> "$GITHUB_OUTPUT"
+
+        jq -r '.results[] | "\(.status | ascii_upcase)  \(.entry) / \(.check)" + (if .detail != "" then "\n        \(.detail)" else "" end)' "$out"
+        echo "$pass passed, $fail failed, $unsupported unsupported"
+
+        if [ "$status" -ne 0 ]; then exit "$status"; fi
+        if [ "${{ inputs.fail-on-unsupported }}" = "true" ] && [ "$unsupported" -gt 0 ]; then
+          echo "::error::$unsupported check(s) unsupported and fail-on-unsupported is true"
+          exit 1
+        fi
