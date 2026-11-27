@@ -32,6 +32,17 @@ is a working example.
 | `corpus-ref` | `main` | Git ref of `stellar-tripwire-corpus` to test against. |
 | `fail-on-unsupported` | `false` | Also fail the job if any check comes back `unsupported`. |
 
+### Path separators
+
+`adapter` runs through Git Bash even on Windows, and this action inserts it
+*unquoted* into that shell's command line on purpose, so e.g. `"node ./x.mjs"`
+becomes two separate arguments rather than one. Bash strips backslashes from
+unquoted text, treating them as escapes — so a Windows-style path (anything
+built from `github.workspace` on a Windows runner, for example) gets corrupted.
+**Use forward slashes and relative paths in `adapter`**, e.g. `node
+ref-adapter/adapter.mjs`, which work on all three platforms; this is also what
+`.github/workflows/test.yml` does.
+
 ## Outputs
 
 `pass`, `fail`, `unsupported` — the counts from the run.
