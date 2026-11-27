@@ -24,3 +24,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   release asset had a bad `.sha256` sidecar (CRLF line ending) that this
   action's own first real Windows CI run caught. Fixed upstream; see
   stellar-tripwire's changelog.
+
+## Note (3)
+
+- Bumped the default `tripwire-version` to `v0.1.4`. No action-interface change
+  needed: v0.1.4 only changed the corpus content (adds a captured entry), and
+  this action always pulls the corpus from stellar-tripwire-corpus@main
+  independently of the pinned binary version.

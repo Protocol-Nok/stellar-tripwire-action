@@ -12,7 +12,7 @@ inputs:
   tripwire-version:
     description: "stellar-tripwire release tag providing the tripwire binary."
     required: false
-    default: "v0.1.3"
+    default: "v0.1.4"
   corpus-ref:
     description: "Git ref of stellar-tripwire-corpus to check out."
     required: false
