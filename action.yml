@@ -12,7 +12,7 @@ inputs:
   tripwire-version:
     description: "stellar-tripwire release tag providing the tripwire binary."
     required: false
-    default: "v0.1.4"
+    default: "v0.1.5"
   corpus-ref:
     description: "Git ref of stellar-tripwire-corpus to check out."
     required: false
@@ -87,7 +87,7 @@ runs:
         set -euo pipefail
         out="$RUNNER_TEMP/tripwire-result.json"
         status=0
-        tripwire run "$RUNNER_TEMP/tripwire-corpus" --adapter ${{ inputs.adapter }} --json > "$out" || status=$?
+        tripwire run "$RUNNER_TEMP/tripwire-corpus" --json -- ${{ inputs.adapter }} > "$out" || status=$?
 
         pass=$(jq '.pass' "$out"); fail=$(jq '.fail' "$out"); unsupported=$(jq '.unsupported' "$out")
         echo "pass=$pass" >> "$GITHUB_OUTPUT"

@@ -31,3 +31,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   needed: v0.1.4 only changed the corpus content (adds a captured entry), and
   this action always pulls the corpus from stellar-tripwire-corpus@main
   independently of the pinned binary version.
+
+## Note (4)
+
+- Bumped the default `tripwire-version` to `v0.1.5`: this is a **required**
+  update, not just tracking latest. `v0.1.5` moves `tripwire run`'s adapter
+  command to after a literal `--` instead of after `--adapter`; this action's
+  internal invocation was updated to match. Older versions of this action
+  used `v0.1.4` or earlier and would now construct an invalid command line
+  against a `v0.1.5+` binary. See stellar-tripwire's changelog for why the
+  CLI changed.
